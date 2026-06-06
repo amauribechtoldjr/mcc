@@ -1,11 +1,14 @@
 dev:
 	air
 
-mig-add:
+migrate-add:
 	goose -s create $(name) sql -dir "./internal/adapters/postgresql/migrations"
 
-mig-up:
+migrate-up:
 	goose up
+
+migrate-down:
+	goose down
 
 sql-gen:
 	sqlc generate
