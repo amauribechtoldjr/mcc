@@ -55,8 +55,10 @@ func (a *application) mount() http.Handler {
 	// Collections
 	collectionsService := collections.NewService(repo.New(a.db))
 	collectionsHandlers := collections.NewHandler(collectionsService)
+
 	r.Post("/collections", collectionsHandlers.CreateCollection)
 	r.Post("/collections/cards", collectionsHandlers.AddCardToCollection)
+	r.Get("/collections/{collectionId}/cards", collectionsHandlers.ListCollectionCards)
 
 	return r
 }

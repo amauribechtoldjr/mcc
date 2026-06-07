@@ -91,3 +91,41 @@ func (q *Queries) ListCards(ctx context.Context) ([]Card, error) {
 	}
 	return items, nil
 }
+
+const listCollectionCards = `-- name: ListCollectionCards :many
+SELECT
+	c.id, 
+  c."name", 
+  cc.quantity 
+FROM 
+	collections_cards cc 
+INNER JOIN cards c ON c.id = cc.card_id 
+WHERE 
+  cc.collection_id = $1
+`
+
+type ListCollectionCardsRow struct {
+	ID       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	Quantity int16     `json:"quantity"`
+}
+
+func (q *Queries) ListCollectionCards(ctx context.Context, collectionID uuid.UUID) ([]ListCollectionCardsRow, error) {
+	rows, err := q.db.Query(ctx, listCollectionCards, collectionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCollectionCardsRow
+	for rows.Next() {
+		var i ListCollectionCardsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Quantity); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
