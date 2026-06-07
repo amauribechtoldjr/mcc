@@ -7,13 +7,36 @@ package repo
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
+
+const createCollection = `-- name: CreateCollection :one
+INSERT INTO collections (user_id, "name") VALUES ($1, $2) RETURNING id, name, created_at, user_id
+`
+
+type CreateCollectionParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Name   string    `json:"name"`
+}
+
+func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error) {
+	row := q.db.QueryRow(ctx, createCollection, arg.UserID, arg.Name)
+	var i Collection
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UserID,
+	)
+	return i, err
+}
 
 const findCardById = `-- name: FindCardById :one
 SELECT id, name, src_url, created_at from cards WHERE id = $1
 `
 
-func (q *Queries) FindCardById(ctx context.Context, id int64) (Card, error) {
+func (q *Queries) FindCardById(ctx context.Context, id uuid.UUID) (Card, error) {
 	row := q.db.QueryRow(ctx, findCardById, id)
 	var i Card
 	err := row.Scan(

@@ -5,12 +5,32 @@
 package repo
 
 import (
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Card struct {
-	ID        int64              `json:"id"`
+	ID        uuid.UUID          `json:"id"`
 	Name      string             `json:"name"`
 	SrcUrl    pgtype.Text        `json:"src_url"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type Collection struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UserID    uuid.UUID          `json:"user_id"`
+}
+
+type CollectionCard struct {
+	CardID       uuid.UUID `json:"card_id"`
+	CollectionID uuid.UUID `json:"collection_id"`
+	Quantity     int16     `json:"quantity"`
+}
+
+type User struct {
+	ID        uuid.UUID          `json:"id"`
+	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }

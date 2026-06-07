@@ -6,10 +6,13 @@ package repo
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
-	FindCardById(ctx context.Context, id int64) (Card, error)
+	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
+	FindCardById(ctx context.Context, id uuid.UUID) (Card, error)
 	ListCards(ctx context.Context) ([]Card, error)
 }
 

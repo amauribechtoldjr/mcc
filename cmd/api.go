@@ -7,7 +7,7 @@ import (
 
 	repo "github.com/amauribechtoldjr/mcc/internal/adapters/postgresql/sqlc"
 	"github.com/amauribechtoldjr/mcc/internal/domain/cards"
-	cards_handler "github.com/amauribechtoldjr/mcc/internal/domain/cards/handlers"
+	"github.com/amauribechtoldjr/mcc/internal/domain/collections"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
@@ -45,11 +45,17 @@ func (a *application) mount() http.Handler {
 		w.Write([]byte("hi"))
 	})
 
+	// Cards
 	cardsService := cards.NewService(repo.New(a.db))
-	cardsHandler := cards_handler.NewHandler(cardsService)
+	cardsHandler := cards.NewHandler(cardsService)
 
 	r.Get("/cards", cardsHandler.ListCardsHandler)
 	r.Get("/cards/{cardId}", cardsHandler.FindCardById)
+
+	// Collections
+	collectionsService := collections.NewService(repo.New(a.db))
+	collectionsHandlers := collections.NewHandler(collectionsService)
+	r.Post("/collections", collectionsHandlers.CreateCollection)
 
 	return r
 }
