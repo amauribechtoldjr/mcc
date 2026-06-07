@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE IF NOT EXISTS collection_cards (
+CREATE TABLE IF NOT EXISTS collections_cards (
   card_id UUID NOT NULL,
   collection_id UUID NOT NULL,
   quantity SMALLINT NOT NULL,
@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS collection_cards (
 );
 
 -- +goose Down
-DROP TABLE IF EXISTS collection_cards;
+DROP TABLE IF EXISTS collections_cards;

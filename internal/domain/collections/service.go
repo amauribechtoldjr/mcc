@@ -17,3 +17,7 @@ func NewService(repo repo.Querier) CollectionsService {
 func (s *svc) CreateCollection(ctx context.Context, collectionData repo.CreateCollectionParams) (repo.Collection, error) {
 	return s.repo.CreateCollection(ctx, collectionData)
 }
+
+func (s *svc) AddCardToCollection(ctx context.Context, cardCollectionData repo.AddCardToCollectionParams) error {
+	return s.repo.AddCardToCollection(ctx, cardCollectionData)
+}

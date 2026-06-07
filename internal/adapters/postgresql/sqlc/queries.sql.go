@@ -11,6 +11,21 @@ import (
 	"github.com/google/uuid"
 )
 
+const addCardToCollection = `-- name: AddCardToCollection :exec
+INSERT INTO collections_cards (card_id, collection_id, quantity) VALUES ($1, $2, $3)
+`
+
+type AddCardToCollectionParams struct {
+	CardID       uuid.UUID `json:"card_id"`
+	CollectionID uuid.UUID `json:"collection_id"`
+	Quantity     int16     `json:"quantity"`
+}
+
+func (q *Queries) AddCardToCollection(ctx context.Context, arg AddCardToCollectionParams) error {
+	_, err := q.db.Exec(ctx, addCardToCollection, arg.CardID, arg.CollectionID, arg.Quantity)
+	return err
+}
+
 const createCollection = `-- name: CreateCollection :one
 INSERT INTO collections (user_id, "name") VALUES ($1, $2) RETURNING id, name, created_at, user_id
 `

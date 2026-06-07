@@ -23,7 +23,7 @@ type Collection struct {
 	UserID    uuid.UUID          `json:"user_id"`
 }
 
-type CollectionCard struct {
+type CollectionsCard struct {
 	CardID       uuid.UUID `json:"card_id"`
 	CollectionID uuid.UUID `json:"collection_id"`
 	Quantity     int16     `json:"quantity"`

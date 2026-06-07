@@ -11,4 +11,6 @@ type CollectionsService interface {
 		ctx context.Context,
 		collectionData repo.CreateCollectionParams,
 	) (repo.Collection, error)
+
+	AddCardToCollection(ctx context.Context, cardCollectionData repo.AddCardToCollectionParams) error
 }

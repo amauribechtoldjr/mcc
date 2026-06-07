@@ -37,3 +37,22 @@ func (h *CollectionsHandlers) CreateCollection(w http.ResponseWriter, r *http.Re
 
 	json.Write(w, http.StatusCreated, collectionData)
 }
+
+func (h *CollectionsHandlers) AddCardToCollection(w http.ResponseWriter, r *http.Request) {
+	var tempCardCollection repo.AddCardToCollectionParams
+
+	if err := json.Read(r, &tempCardCollection); err != nil {
+		log.Println(err)
+		json.WriteError(w, apperrors.ErrBadRequest)
+		return
+	}
+
+	err := h.service.AddCardToCollection(r.Context(), tempCardCollection)
+	if err != nil {
+		log.Println(err)
+		json.WriteError(w, nil)
+		return
+	}
+
+	json.Write(w, http.StatusCreated, nil)
+}
