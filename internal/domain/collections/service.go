@@ -8,6 +8,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type CollectionsService interface {
+	CreateCollection(ctx context.Context, collectionData repo.CreateCollectionParams) (repo.Collection, error)
+	ListCollections(ctx context.Context, collectionId uuid.UUID) ([]repo.Collection, error)
+	AddCardToCollection(ctx context.Context, cardCollectionData repo.AddCardToCollectionParams) error
+	ListCollectionCards(ctx context.Context, collectionId uuid.UUID) ([]repo.ListCollectionCardsRow, error)
+}
+
 type svc struct {
 	repo repo.Querier
 }
@@ -27,4 +34,9 @@ func (s *svc) AddCardToCollection(ctx context.Context, cardCollectionData repo.A
 
 func (s *svc) ListCollectionCards(ctx context.Context, collectionId uuid.UUID) ([]repo.ListCollectionCardsRow, error) {
 	return s.repo.ListCollectionCards(ctx, collectionId)
+}
+
+func (s *svc) ListCollections(ctx context.Context, userId uuid.UUID) ([]repo.Collection, error) {
+	collections, err := s.repo.ListCollections(ctx, userId)
+	return collections, apperrors.PgxErrors(err)
 }

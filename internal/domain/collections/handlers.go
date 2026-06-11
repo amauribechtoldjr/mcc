@@ -73,5 +73,32 @@ func (h *CollectionsHandlers) ListCollectionCards(w http.ResponseWriter, r *http
 		return
 	}
 
-	json.Write(w, http.StatusCreated, cardsList)
+	if cardsList == nil {
+		json.Write(w, http.StatusOK, []string{})
+		return
+	}
+
+	json.Write(w, http.StatusOK, cardsList)
+}
+
+func (h *CollectionsHandlers) ListCollection(w http.ResponseWriter, r *http.Request) {
+	userId, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		json.WriteError(w, apperrors.ErrBadRequest)
+		return
+	}
+
+	collections, err := h.service.ListCollections(r.Context(), userId)
+	if err != nil {
+		log.Println(err)
+		json.WriteError(w, apperrors.ErrInternalServerError)
+		return
+	}
+
+	if collections == nil {
+		json.Write(w, http.StatusOK, []string{})
+		return
+	}
+
+	json.Write(w, http.StatusCreated, collections)
 }

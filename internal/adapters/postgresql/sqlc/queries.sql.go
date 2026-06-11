@@ -129,3 +129,32 @@ func (q *Queries) ListCollectionCards(ctx context.Context, collectionID uuid.UUI
 	}
 	return items, nil
 }
+
+const listCollections = `-- name: ListCollections :many
+SELECT id, name, created_at, user_id FROM collections WHERE user_id = $1
+`
+
+func (q *Queries) ListCollections(ctx context.Context, userID uuid.UUID) ([]Collection, error) {
+	rows, err := q.db.Query(ctx, listCollections, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Collection
+	for rows.Next() {
+		var i Collection
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

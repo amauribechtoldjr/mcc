@@ -16,6 +16,7 @@ type Querier interface {
 	FindCardById(ctx context.Context, id uuid.UUID) (Card, error)
 	ListCards(ctx context.Context) ([]Card, error)
 	ListCollectionCards(ctx context.Context, collectionID uuid.UUID) ([]ListCollectionCardsRow, error)
+	ListCollections(ctx context.Context, userID uuid.UUID) ([]Collection, error)
 }
 
 var _ Querier = (*Queries)(nil)
