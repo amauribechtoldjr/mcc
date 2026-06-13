@@ -1,10 +1,8 @@
-package json
+package web
 
 import (
 	"encoding/json"
 	"net/http"
-
-	"github.com/amauribechtoldjr/mcc/internal/apperrors"
 )
 
 type ErrorResult struct {
@@ -16,7 +14,7 @@ type EntityResult struct {
 }
 
 func WriteError(w http.ResponseWriter, err error) {
-	setDefaultHeaders(w, apperrors.HTTPStatus(err))
+	setDefaultHeaders(w, HTTPStatus(err))
 
 	json.NewEncoder(w).Encode(&ErrorResult{Error: err.Error()})
 }

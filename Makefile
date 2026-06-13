@@ -2,7 +2,7 @@ dev:
 	air
 
 migrate-add:
-	goose -s create $(name) sql -dir "./internal/adapters/postgresql/migrations"
+	goose -s create $(name) sql -dir "./internal/adapter/repository/postgres/migrations"
 
 migrate-up:
 	goose up
