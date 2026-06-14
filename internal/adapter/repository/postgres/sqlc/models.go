@@ -10,27 +10,68 @@ import (
 )
 
 type Card struct {
-	ID        uuid.UUID          `json:"id"`
-	Name      string             `json:"name"`
-	SrcUrl    pgtype.Text        `json:"src_url"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID       uuid.UUID `json:"id"`
+	OracleID uuid.UUID `json:"oracle_id"`
+	GameID   uuid.UUID `json:"game_id"`
 }
 
 type Collection struct {
 	ID        uuid.UUID          `json:"id"`
 	Name      string             `json:"name"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	GameID    uuid.UUID          `json:"game_id"`
 	UserID    uuid.UUID          `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
-type CollectionsCard struct {
+type CollectionCard struct {
 	CardID       uuid.UUID `json:"card_id"`
 	CollectionID uuid.UUID `json:"collection_id"`
 	Quantity     int16     `json:"quantity"`
 }
 
+type Game struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+type MtgCard struct {
+	ID             uuid.UUID      `json:"id"`
+	SetID          uuid.UUID      `json:"set_id"`
+	CardID         uuid.UUID      `json:"card_id"`
+	Layout         pgtype.Text    `json:"layout"`
+	Cmc            pgtype.Numeric `json:"cmc"`
+	ColorIdentity  pgtype.Text    `json:"color_identity"`
+	ColorIndicator pgtype.Text    `json:"color_indicator"`
+	Colors         pgtype.Text    `json:"colors"`
+	ImgSmallUri    pgtype.Text    `json:"img_small_uri"`
+	ImgNormalUri   pgtype.Text    `json:"img_normal_uri"`
+}
+
+type MtgRelated struct {
+	ID        uuid.UUID `json:"id"`
+	ImportID  uuid.UUID `json:"import_id"`
+	Layout    string    `json:"layout"`
+	Component string    `json:"component"`
+	Name      string    `json:"name"`
+	TypeLine  string    `json:"type_line"`
+}
+
+type MtgRelatedCard struct {
+	ID           uuid.UUID `json:"id"`
+	MtgCardID    uuid.UUID `json:"mtg_card_id"`
+	MtgRelatedID uuid.UUID `json:"mtg_related_id"`
+}
+
+type MtgSet struct {
+	ID            uuid.UUID          `json:"id"`
+	Code          string             `json:"code"`
+	Name          string             `json:"name"`
+	ReleasedAt    pgtype.Timestamptz `json:"released_at"`
+	ParentSetCode pgtype.Text        `json:"parent_set_code"`
+	CardCount     pgtype.Int4        `json:"card_count"`
+}
+
 type User struct {
-	ID        uuid.UUID          `json:"id"`
-	Name      string             `json:"name"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
 }

@@ -50,22 +50,6 @@ func (h *CollectionHandler) AddCardToCollection(w http.ResponseWriter, r *http.R
 	web.Write(w, http.StatusCreated, nil)
 }
 
-func (h *CollectionHandler) ListCollectionCards(w http.ResponseWriter, r *http.Request) {
-	collectionID, err := uuid.Parse(chi.URLParam(r, "collectionId"))
-	if err != nil {
-		web.WriteError(w, apperror.ErrBadRequest)
-		return
-	}
-
-	cards, err := h.service.ListCollectionCards(r.Context(), collectionID)
-	if err != nil {
-		web.WriteError(w, err)
-		return
-	}
-
-	web.Write(w, http.StatusOK, cards)
-}
-
 func (h *CollectionHandler) ListCollections(w http.ResponseWriter, r *http.Request) {
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
 	if err != nil {

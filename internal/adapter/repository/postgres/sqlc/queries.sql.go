@@ -12,7 +12,7 @@ import (
 )
 
 const addCardToCollection = `-- name: AddCardToCollection :exec
-INSERT INTO collections_cards (card_id, collection_id, quantity) VALUES ($1, $2, $3)
+INSERT INTO collection_card (card_id, collection_id, quantity) VALUES ($1, $2, $3)
 `
 
 type AddCardToCollectionParams struct {
@@ -27,7 +27,7 @@ func (q *Queries) AddCardToCollection(ctx context.Context, arg AddCardToCollecti
 }
 
 const createCollection = `-- name: CreateCollection :one
-INSERT INTO collections (user_id, "name") VALUES ($1, $2) RETURNING id, name, created_at, user_id
+INSERT INTO "collection" (user_id, "name") VALUES ($1, $2) RETURNING id, name, game_id, user_id, created_at
 `
 
 type CreateCollectionParams struct {
@@ -41,30 +41,26 @@ func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionPara
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.CreatedAt,
+		&i.GameID,
 		&i.UserID,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const findCardById = `-- name: FindCardById :one
-SELECT id, name, src_url, created_at from cards WHERE id = $1
+SELECT id, oracle_id, game_id from "card" WHERE id = $1
 `
 
 func (q *Queries) FindCardById(ctx context.Context, id uuid.UUID) (Card, error) {
 	row := q.db.QueryRow(ctx, findCardById, id)
 	var i Card
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.SrcUrl,
-		&i.CreatedAt,
-	)
+	err := row.Scan(&i.ID, &i.OracleID, &i.GameID)
 	return i, err
 }
 
 const listCards = `-- name: ListCards :many
-SELECT id, name, src_url, created_at FROM cards
+SELECT id, oracle_id, game_id FROM "card"
 `
 
 func (q *Queries) ListCards(ctx context.Context) ([]Card, error) {
@@ -76,50 +72,7 @@ func (q *Queries) ListCards(ctx context.Context) ([]Card, error) {
 	var items []Card
 	for rows.Next() {
 		var i Card
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.SrcUrl,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listCollectionCards = `-- name: ListCollectionCards :many
-SELECT
-	c.id, 
-  c."name", 
-  cc.quantity 
-FROM 
-	collections_cards cc 
-INNER JOIN cards c ON c.id = cc.card_id 
-WHERE 
-  cc.collection_id = $1
-`
-
-type ListCollectionCardsRow struct {
-	ID       uuid.UUID `json:"id"`
-	Name     string    `json:"name"`
-	Quantity int16     `json:"quantity"`
-}
-
-func (q *Queries) ListCollectionCards(ctx context.Context, collectionID uuid.UUID) ([]ListCollectionCardsRow, error) {
-	rows, err := q.db.Query(ctx, listCollectionCards, collectionID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListCollectionCardsRow
-	for rows.Next() {
-		var i ListCollectionCardsRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.Quantity); err != nil {
+		if err := rows.Scan(&i.ID, &i.OracleID, &i.GameID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -131,7 +84,7 @@ func (q *Queries) ListCollectionCards(ctx context.Context, collectionID uuid.UUI
 }
 
 const listCollections = `-- name: ListCollections :many
-SELECT id, name, created_at, user_id FROM collections WHERE user_id = $1
+SELECT id, name, game_id, user_id, created_at FROM "collection" WHERE user_id = $1
 `
 
 func (q *Queries) ListCollections(ctx context.Context, userID uuid.UUID) ([]Collection, error) {
@@ -146,8 +99,9 @@ func (q *Queries) ListCollections(ctx context.Context, userID uuid.UUID) ([]Coll
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.CreatedAt,
+			&i.GameID,
 			&i.UserID,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

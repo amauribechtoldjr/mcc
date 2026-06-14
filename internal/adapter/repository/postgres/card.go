@@ -42,9 +42,8 @@ func (r *cardRepository) FindCardByID(ctx context.Context, id uuid.UUID) (domain
 
 func toDomainCard(row repo.Card) domain.Card {
 	return domain.Card{
-		ID:        row.ID,
-		Name:      row.Name,
-		SrcURL:    row.SrcUrl.String,
-		CreatedAt: row.CreatedAt.Time,
+		ID:       row.ID,
+		OracleID: row.OracleID,
+		GameID:   row.GameID,
 	}
 }

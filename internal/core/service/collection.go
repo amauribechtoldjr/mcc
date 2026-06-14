@@ -24,10 +24,6 @@ func (s *collectionService) AddCardToCollection(ctx context.Context, in domain.C
 	return s.repo.AddCardToCollection(ctx, in)
 }
 
-func (s *collectionService) ListCollectionCards(ctx context.Context, collectionID uuid.UUID) ([]domain.CardInCollection, error) {
-	return s.repo.ListCollectionCards(ctx, collectionID)
-}
-
 func (s *collectionService) ListCollections(ctx context.Context, userID uuid.UUID) ([]domain.Collection, error) {
 	return s.repo.ListCollections(ctx, userID)
 }

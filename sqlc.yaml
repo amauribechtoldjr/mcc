@@ -1,0 +1,18 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries:
+      - "./internal/adapter/repository/postgres/sqlc/queries.sql"
+    schema: "./internal/adapter/repository/postgres/migrations"
+    gen:
+      go:
+        package: "repo"
+        out: "./internal/adapter/repository/postgres/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_interface: true
+        overrides:
+          - db_type: "uuid"
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"

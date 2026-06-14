@@ -37,24 +37,6 @@ func (r *collectionRepository) AddCardToCollection(ctx context.Context, in domai
 	}))
 }
 
-func (r *collectionRepository) ListCollectionCards(ctx context.Context, collectionID uuid.UUID) ([]domain.CardInCollection, error) {
-	rows, err := r.q.ListCollectionCards(ctx, collectionID)
-	if err != nil {
-		return nil, mapError(err)
-	}
-
-	cards := make([]domain.CardInCollection, 0, len(rows))
-	for _, row := range rows {
-		cards = append(cards, domain.CardInCollection{
-			ID:       row.ID,
-			Name:     row.Name,
-			Quantity: row.Quantity,
-		})
-	}
-
-	return cards, nil
-}
-
 func (r *collectionRepository) ListCollections(ctx context.Context, userID uuid.UUID) ([]domain.Collection, error) {
 	rows, err := r.q.ListCollections(ctx, userID)
 	if err != nil {

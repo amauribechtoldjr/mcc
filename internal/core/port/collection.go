@@ -10,13 +10,11 @@ import (
 type CollectionService interface {
 	CreateCollection(ctx context.Context, in domain.NewCollection) (domain.Collection, error)
 	AddCardToCollection(ctx context.Context, in domain.CardToCollection) error
-	ListCollectionCards(ctx context.Context, collectionID uuid.UUID) ([]domain.CardInCollection, error)
 	ListCollections(ctx context.Context, userID uuid.UUID) ([]domain.Collection, error)
 }
 
 type CollectionRepository interface {
 	CreateCollection(ctx context.Context, in domain.NewCollection) (domain.Collection, error)
 	AddCardToCollection(ctx context.Context, in domain.CardToCollection) error
-	ListCollectionCards(ctx context.Context, collectionID uuid.UUID) ([]domain.CardInCollection, error)
 	ListCollections(ctx context.Context, userID uuid.UUID) ([]domain.Collection, error)
 }

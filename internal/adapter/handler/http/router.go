@@ -42,7 +42,6 @@ func NewRouter(allowedOrigin string, card *CardHandler, collection *CollectionHa
 	r.Post("/collections", collection.CreateCollection)
 	r.Get("/collections/{userId}", collection.ListCollections)
 	r.Post("/collections/cards", collection.AddCardToCollection)
-	r.Get("/collections/{collectionId}/cards", collection.ListCollectionCards)
 
 	return r
 }
