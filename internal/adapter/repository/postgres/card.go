@@ -63,24 +63,15 @@ func (r *cardRepository) CreateCards(ctx context.Context, cards []domain.ImportC
 			Valid:   true,
 		}
 
-		var colorIdentity string
-		colorIdentity = strings.Join(card.MTGCard.ColorIdentity, "")
-
-		var colorIndicator string
-		colorIndicator = strings.Join(card.MTGCard.ColorIndicator, "")
-
-		var colors string
-		colors = strings.Join(card.MTGCard.Colors, "")
-
 		mtgCardParams := repo.CreateMTGCardParams{
 			SetID:          card.MTGCard.SetID,
 			Name:           card.MTGCard.Name,
 			CardID:         card.MTGCard.CardID,
 			Layout:         &card.MTGCard.Layout,
 			Cmc:            cmcValue,
-			ColorIdentity:  &colorIdentity,
-			ColorIndicator: &colorIndicator,
-			Colors:         &colors,
+			ColorIdentity:  stringsToString(card.MTGCard.ColorIdentity),
+			ColorIndicator: stringsToString(card.MTGCard.ColorIndicator),
+			Colors:         stringsToString(card.MTGCard.Colors),
 			ImgSmallUri:    &card.MTGCard.ImgSmallURI,
 			ImgNormalUri:   &card.MTGCard.ImgNormalURI,
 		}
@@ -93,6 +84,12 @@ func (r *cardRepository) CreateCards(ctx context.Context, cards []domain.ImportC
 	}
 
 	return nil
+}
+
+func stringsToString(strs []string) *string {
+	var res string
+	res = strings.Join(strs, ",")
+	return &res
 }
 
 func toDomainCard(row repo.Card) domain.Card {
