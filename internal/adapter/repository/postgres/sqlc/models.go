@@ -7,6 +7,7 @@ package repo
 import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 type Card struct {
@@ -32,19 +33,21 @@ type CollectionCard struct {
 type Game struct {
 	ID   uuid.UUID `json:"id"`
 	Name string    `json:"name"`
+	Code string    `json:"code"`
 }
 
 type MtgCard struct {
-	ID             uuid.UUID      `json:"id"`
-	SetID          uuid.UUID      `json:"set_id"`
-	CardID         uuid.UUID      `json:"card_id"`
-	Layout         pgtype.Text    `json:"layout"`
-	Cmc            pgtype.Numeric `json:"cmc"`
-	ColorIdentity  pgtype.Text    `json:"color_identity"`
-	ColorIndicator pgtype.Text    `json:"color_indicator"`
-	Colors         pgtype.Text    `json:"colors"`
-	ImgSmallUri    pgtype.Text    `json:"img_small_uri"`
-	ImgNormalUri   pgtype.Text    `json:"img_normal_uri"`
+	ID             uuid.UUID           `json:"id"`
+	SetID          uuid.UUID           `json:"set_id"`
+	CardID         uuid.UUID           `json:"card_id"`
+	Name           string              `json:"name"`
+	Layout         *string             `json:"layout"`
+	Cmc            decimal.NullDecimal `json:"cmc"`
+	ColorIdentity  *string             `json:"color_identity"`
+	ColorIndicator *string             `json:"color_indicator"`
+	Colors         *string             `json:"colors"`
+	ImgSmallUri    *string             `json:"img_small_uri"`
+	ImgNormalUri   *string             `json:"img_normal_uri"`
 }
 
 type MtgRelated struct {
@@ -67,8 +70,8 @@ type MtgSet struct {
 	Code          string             `json:"code"`
 	Name          string             `json:"name"`
 	ReleasedAt    pgtype.Timestamptz `json:"released_at"`
-	ParentSetCode pgtype.Text        `json:"parent_set_code"`
-	CardCount     pgtype.Int4        `json:"card_count"`
+	ParentSetCode *string            `json:"parent_set_code"`
+	CardCount     *int32             `json:"card_count"`
 }
 
 type User struct {

@@ -12,8 +12,11 @@ import (
 
 type Querier interface {
 	AddCardToCollection(ctx context.Context, arg AddCardToCollectionParams) error
+	CreateCard(ctx context.Context, arg CreateCardParams) (uuid.UUID, error)
 	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
+	CreateMTGCard(ctx context.Context, arg CreateMTGCardParams) error
 	FindCardById(ctx context.Context, id uuid.UUID) (Card, error)
+	FindGameByCode(ctx context.Context, code string) (Game, error)
 	ListCards(ctx context.Context) ([]Card, error)
 	ListCollections(ctx context.Context, userID uuid.UUID) ([]Collection, error)
 }

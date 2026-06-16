@@ -11,8 +11,8 @@ import (
 	"github.com/amauribechtoldjr/mcc/internal/adapter/repository/postgres"
 	repo "github.com/amauribechtoldjr/mcc/internal/adapter/repository/postgres/sqlc"
 	"github.com/amauribechtoldjr/mcc/internal/core/service"
+	"github.com/amauribechtoldjr/mcc/internal/platform/database"
 	"github.com/amauribechtoldjr/mcc/internal/platform/env"
-	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 )
 
@@ -31,7 +31,7 @@ func main() {
 		"host=localhost user=postgres password=postgres dbname=mcc sslmode=disable",
 	)
 
-	conn, err := pgx.Connect(ctx, dsn)
+	conn, err := database.Connect(ctx, dsn)
 	if err != nil {
 		slog.Error("failed to connect to the database", "error", err)
 		os.Exit(1)

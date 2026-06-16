@@ -10,6 +10,9 @@ migrate-up:
 migrate-down:
 	goose down
 
+migrate-down-to:
+	goose down-to $(version)
+
 sql-gen:
 	sqlc generate
 
@@ -19,4 +22,6 @@ start-infra:
 stop-infra:
 	docker compose down
 
+import:
+	go run ./cmd/importcards/main.go
 	

@@ -12,3 +12,39 @@ INSERT INTO "collection" (user_id, "name") VALUES ($1, $2) RETURNING *;
 
 -- name: AddCardToCollection :exec
 INSERT INTO collection_card (card_id, collection_id, quantity) VALUES ($1, $2, $3);
+
+-- name: FindGameByCode :one
+SELECT * FROM game WHERE code = $1;
+
+-- name: CreateCard :one
+INSERT INTO "card" (oracle_id, game_id)
+VALUES ($1, $2)
+ON CONFLICT (oracle_id) DO UPDATE
+  SET oracle_id = EXCLUDED.oracle_id
+RETURNING id;
+
+-- name: CreateMTGCard :exec
+INSERT INTO mtg_card (
+  set_id, 
+  card_id,
+  "name",
+  layout, 
+  cmc, 
+  color_identity, 
+  color_indicator, 
+  colors, 
+  img_small_uri, 
+  img_normal_uri
+)
+VALUES (
+  $1, 
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10
+);

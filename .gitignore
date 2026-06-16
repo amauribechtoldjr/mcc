@@ -1,3 +1,4 @@
 .env
 tmp/
+imports/
 cards.json

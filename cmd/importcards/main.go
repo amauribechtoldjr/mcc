@@ -1,111 +1,65 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
+	"context"
+	"log/slog"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/amauribechtoldjr/mcc/internal/adapter/repository/postgres"
+	repo "github.com/amauribechtoldjr/mcc/internal/adapter/repository/postgres/sqlc"
+	"github.com/amauribechtoldjr/mcc/internal/adapter/scryfall"
+	"github.com/amauribechtoldjr/mcc/internal/core/service"
+	"github.com/amauribechtoldjr/mcc/internal/platform/database"
+	"github.com/amauribechtoldjr/mcc/internal/platform/env"
+	"github.com/joho/godotenv"
 )
 
-type BulkDataResponse struct {
-	Object  string     `json:"object"`
-	Data    []BulkItem `json:"data"`
-	HasMore bool       `json:"has_more"`
-}
-
-type BulkItem struct {
-	Id              string `json:"id"`
-	Uri             string `json:"uri"`
-	Type            string `json:"type"`
-	Name            string `json:"name"`
-	DownloadUri     string `json:"download_uri"`
-	UpdatedAt       string `json:"updated_at"`
-	Size            int    `json:"size"`
-	ContentType     string `json:"content_type"`
-	ContentEncoding string `json:"content_encoding"`
-}
+const (
+	gameCode  = "mtg"
+	cardLimit = 5000
+	userAgent = "my-magic-collection/0.1 (contact: amauribechtoldjr@gmail.com)"
+)
 
 func main() {
-	downloadURI, err := getBulkDownloadURL("default_cards")
-	if err != nil {
-		panic(err)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+	ctx := context.Background()
+
+	if err := godotenv.Load(); err != nil {
+		slog.Error("failed to start godotenv", "error", err)
+		os.Exit(1)
 	}
 
-	fmt.Println("downloading from:", downloadURI)
-
-	err = downloadFile(downloadURI, "cards.json")
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("file saved at ./cards.json")
-}
-
-func getBulkDownloadURL(bulkType string) (string, error) {
-	client := &http.Client{}
-
-	req, err := http.NewRequest(
-		"GET",
-		"https://api.scryfall.com/bulk-data",
-		nil,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set(
-		"User-Agent",
-		"my-magic-collection/0.1 (contact: amauribechtoldjr@gmail.com)",
-	)
-	req.Header.Set(
-		"Accept",
-		"application/json;q=0.9",
+	dsn := env.GetString(
+		"GOOSE_DBSTRING",
+		"host=localhost user=postgres password=postgres dbname=mcc sslmode=disable",
 	)
 
-	response, err := client.Do(req)
+	conn, err := database.Connect(ctx, dsn)
 	if err != nil {
-		return "", err
+		slog.Error("failed to connect to the database", "error", err)
+		os.Exit(1)
 	}
-	defer response.Body.Close()
+	defer conn.Close(ctx)
 
-	if response.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API error: %s", response.Status)
-	}
+	slog.Info("connected to database")
 
-	var bulkData BulkDataResponse
+	queries := repo.New(conn)
 
-	err = json.NewDecoder(response.Body).Decode(&bulkData)
-	if err != nil {
-		return "", err
-	}
+	cardRepo := postgres.NewCardRepository(queries)
+	gameRepo := postgres.NewGameRepository(queries)
 
-	for _, item := range bulkData.Data {
-		if item.Type == bulkType {
-			return item.DownloadUri, nil
-		}
-	}
+	client := &http.Client{Timeout: 5 * time.Minute}
+	source := scryfall.NewCardSource(client, userAgent)
 
-	return "", fmt.Errorf("bulk type %s not found", bulkType)
-}
+	importService := service.NewImportService(source, cardRepo, gameRepo)
 
-func downloadFile(url, fileName string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API error: %s", resp.Status)
+	if err := importService.Run(ctx, gameCode, cardLimit); err != nil {
+		slog.Error("failed to import cards", "error", err)
+		os.Exit(1)
 	}
 
-	file, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, resp.Body)
-	return err
+	slog.Info("import command finished")
 }

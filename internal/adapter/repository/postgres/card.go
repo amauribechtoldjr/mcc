@@ -2,11 +2,14 @@ package postgres
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	repo "github.com/amauribechtoldjr/mcc/internal/adapter/repository/postgres/sqlc"
 	"github.com/amauribechtoldjr/mcc/internal/core/domain"
 	"github.com/amauribechtoldjr/mcc/internal/core/port"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 type cardRepository struct {
@@ -38,6 +41,58 @@ func (r *cardRepository) FindCardByID(ctx context.Context, id uuid.UUID) (domain
 	}
 
 	return toDomainCard(row), nil
+}
+
+func (r *cardRepository) CreateCards(ctx context.Context, cards []domain.ImportCard) error {
+	for _, card := range cards {
+		cardId, err := r.q.CreateCard(ctx, repo.CreateCardParams{
+			OracleID: card.Card.OracleID,
+			GameID:   card.Card.GameID,
+		})
+
+		if err != nil {
+			fmt.Printf("CARD ERROR: %v \n", err)
+			return mapError(err)
+		}
+
+		card.MTGCard.CardID = cardId
+		card.MTGCard.SetID = uuid.MustParse("019ecaeb-57f4-7ef5-b147-a8bd5a9b6368")
+
+		cmcValue := decimal.NullDecimal{
+			Decimal: decimal.NewFromFloat32(card.MTGCard.CMC),
+			Valid:   true,
+		}
+
+		var colorIdentity string
+		colorIdentity = strings.Join(card.MTGCard.ColorIdentity, "")
+
+		var colorIndicator string
+		colorIndicator = strings.Join(card.MTGCard.ColorIndicator, "")
+
+		var colors string
+		colors = strings.Join(card.MTGCard.Colors, "")
+
+		mtgCardParams := repo.CreateMTGCardParams{
+			SetID:          card.MTGCard.SetID,
+			Name:           card.MTGCard.Name,
+			CardID:         card.MTGCard.CardID,
+			Layout:         &card.MTGCard.Layout,
+			Cmc:            cmcValue,
+			ColorIdentity:  &colorIdentity,
+			ColorIndicator: &colorIndicator,
+			Colors:         &colors,
+			ImgSmallUri:    &card.MTGCard.ImgSmallURI,
+			ImgNormalUri:   &card.MTGCard.ImgNormalURI,
+		}
+
+		err = r.q.CreateMTGCard(ctx, mtgCardParams)
+		if err != nil {
+			fmt.Printf("MTG CARD ERROR: %v", err)
+			return mapError(err)
+		}
+	}
+
+	return nil
 }
 
 func toDomainCard(row repo.Card) domain.Card {

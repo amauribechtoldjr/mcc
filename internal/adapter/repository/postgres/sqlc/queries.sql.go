@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 const addCardToCollection = `-- name: AddCardToCollection :exec
@@ -24,6 +25,26 @@ type AddCardToCollectionParams struct {
 func (q *Queries) AddCardToCollection(ctx context.Context, arg AddCardToCollectionParams) error {
 	_, err := q.db.Exec(ctx, addCardToCollection, arg.CardID, arg.CollectionID, arg.Quantity)
 	return err
+}
+
+const createCard = `-- name: CreateCard :one
+INSERT INTO "card" (oracle_id, game_id)
+VALUES ($1, $2)
+ON CONFLICT (oracle_id) DO UPDATE
+  SET oracle_id = EXCLUDED.oracle_id
+RETURNING id
+`
+
+type CreateCardParams struct {
+	OracleID uuid.UUID `json:"oracle_id"`
+	GameID   uuid.UUID `json:"game_id"`
+}
+
+func (q *Queries) CreateCard(ctx context.Context, arg CreateCardParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createCard, arg.OracleID, arg.GameID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const createCollection = `-- name: CreateCollection :one
@@ -48,6 +69,62 @@ func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionPara
 	return i, err
 }
 
+const createMTGCard = `-- name: CreateMTGCard :exec
+INSERT INTO mtg_card (
+  set_id, 
+  card_id,
+  "name",
+  layout, 
+  cmc, 
+  color_identity, 
+  color_indicator, 
+  colors, 
+  img_small_uri, 
+  img_normal_uri
+)
+VALUES (
+  $1, 
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10
+)
+`
+
+type CreateMTGCardParams struct {
+	SetID          uuid.UUID           `json:"set_id"`
+	CardID         uuid.UUID           `json:"card_id"`
+	Name           string              `json:"name"`
+	Layout         *string             `json:"layout"`
+	Cmc            decimal.NullDecimal `json:"cmc"`
+	ColorIdentity  *string             `json:"color_identity"`
+	ColorIndicator *string             `json:"color_indicator"`
+	Colors         *string             `json:"colors"`
+	ImgSmallUri    *string             `json:"img_small_uri"`
+	ImgNormalUri   *string             `json:"img_normal_uri"`
+}
+
+func (q *Queries) CreateMTGCard(ctx context.Context, arg CreateMTGCardParams) error {
+	_, err := q.db.Exec(ctx, createMTGCard,
+		arg.SetID,
+		arg.CardID,
+		arg.Name,
+		arg.Layout,
+		arg.Cmc,
+		arg.ColorIdentity,
+		arg.ColorIndicator,
+		arg.Colors,
+		arg.ImgSmallUri,
+		arg.ImgNormalUri,
+	)
+	return err
+}
+
 const findCardById = `-- name: FindCardById :one
 SELECT id, oracle_id, game_id from "card" WHERE id = $1
 `
@@ -56,6 +133,17 @@ func (q *Queries) FindCardById(ctx context.Context, id uuid.UUID) (Card, error) 
 	row := q.db.QueryRow(ctx, findCardById, id)
 	var i Card
 	err := row.Scan(&i.ID, &i.OracleID, &i.GameID)
+	return i, err
+}
+
+const findGameByCode = `-- name: FindGameByCode :one
+SELECT id, name, code FROM game WHERE code = $1
+`
+
+func (q *Queries) FindGameByCode(ctx context.Context, code string) (Game, error) {
+	row := q.db.QueryRow(ctx, findGameByCode, code)
+	var i Game
+	err := row.Scan(&i.ID, &i.Name, &i.Code)
 	return i, err
 }
 

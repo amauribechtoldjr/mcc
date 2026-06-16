@@ -15,4 +15,5 @@ type CardService interface {
 type CardRepository interface {
 	ListCards(ctx context.Context) ([]domain.Card, error)
 	FindCardByID(ctx context.Context, id uuid.UUID) (domain.Card, error)
+	CreateCards(ctx context.Context, cards []domain.ImportCard) error
 }
