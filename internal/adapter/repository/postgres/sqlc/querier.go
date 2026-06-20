@@ -15,6 +15,7 @@ type Querier interface {
 	CreateCard(ctx context.Context, arg CreateCardParams) (uuid.UUID, error)
 	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
 	CreateMTGCard(ctx context.Context, arg CreateMTGCardParams) error
+	CreateMTGSet(ctx context.Context, arg CreateMTGSetParams) (uuid.UUID, error)
 	FindCardById(ctx context.Context, id uuid.UUID) (Card, error)
 	FindGameByCode(ctx context.Context, code string) (Game, error)
 	ListCards(ctx context.Context) ([]Card, error)

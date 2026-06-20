@@ -36,15 +36,16 @@ INSERT INTO mtg_card (
   img_small_uri, 
   img_normal_uri
 )
-VALUES (
-  $1, 
-  $2,
-  $3,
-  $4,
-  $5,
-  $6,
-  $7,
-  $8,
-  $9,
-  $10
-);
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+
+-- name: CreateMTGSet :one
+INSERT INTO mtg_set (
+  import_id,
+  "name",
+  code,
+  released_at,
+  parent_set_code, 
+  card_count
+)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id;

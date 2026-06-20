@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/amauribechtoldjr/mcc/internal/core/domain"
 	"github.com/amauribechtoldjr/mcc/internal/core/port"
@@ -15,9 +16,9 @@ import (
 )
 
 const (
-	bulkDataURL  = "https://api.scryfall.com/bulk-data"
-	bulkDataType = "default_cards"
-	importDir    = "C:/dev/mcc/imports"
+	scryfallAPIUrl = "https://api.scryfall.com"
+	bulkDataType   = "default_cards"
+	importDir      = "C:/dev/mcc/imports"
 )
 
 type bulkDataResponse struct {
@@ -27,6 +28,23 @@ type bulkDataResponse struct {
 type bulkItem struct {
 	Type        string `json:"type"`
 	DownloadUri string `json:"download_uri"`
+}
+
+type setsResponse struct {
+	Data []scryfallSet `json:"data"`
+}
+
+type scryfallSet struct {
+	ID            string `json:"id"`
+	Code          string `json:"code"`
+	Name          string `json:"name"`
+	SetType       string `json:"set_type"`
+	ReleasedAt    string `json:"released_at"`
+	ParentSetCode string `json:"parent_set_code"`
+	CardCount     int16  `json:"card_count"`
+	PrintedSize   int16  `json:"printed_size"`
+	Digital       bool   `json:"digital"`
+	IconSvgURI    string `json:"icon_svg_uri"`
 }
 
 type scryfallCardImageURIs struct {
@@ -50,6 +68,8 @@ type scryfallCard struct {
 	Colors         []string              `json:"colors"`
 	ColorIdentity  []string              `json:"color_identity"`
 	ColorIndicator []string              `json:"color_indicator"`
+	Set            string                `json:"set"`
+	SetID          string                `json:"set_id"`
 }
 
 type cardSource struct {
@@ -61,8 +81,45 @@ func NewCardSource(client *http.Client, userAgent string) port.CardSource {
 	return &cardSource{client: client, userAgent: userAgent}
 }
 
-func (s *cardSource) bulkFilePath() string {
-	return filepath.Join(importDir, fmt.Sprintf("scryfall-%s.json", bulkDataType))
+func (s *cardSource) ReadSets(ctx context.Context) ([]domain.MTGSet, error) {
+	resp, err := s.execScryfallRequest(ctx, scryfallAPIUrl+"/sets")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var sets setsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&sets); err != nil {
+		return nil, err
+	}
+
+	mtgSets := make([]domain.MTGSet, 0, len(sets.Data))
+	for _, ss := range sets.Data {
+		id, err := uuid.Parse(ss.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		if ss.Digital {
+			continue
+		}
+
+		parsedReleaseAt, err := time.Parse(time.DateOnly, ss.ReleasedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		mtgSets = append(mtgSets, domain.MTGSet{
+			ImportID:      id,
+			Code:          ss.Code,
+			Name:          ss.Name,
+			ReleasedAt:    parsedReleaseAt,
+			ParentSetCode: ss.ParentSetCode,
+			CardCount:     int32(ss.CardCount),
+		})
+	}
+
+	return mtgSets, nil
 }
 
 func (s *cardSource) GetBulkFileIfExists() (string, bool) {
@@ -123,38 +180,6 @@ func (s *cardSource) Download(ctx context.Context) (string, error) {
 	return finalPath, nil
 }
 
-func (s *cardSource) bulkDownloadURL(ctx context.Context, bulkType string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, bulkDataURL, nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("User-Agent", s.userAgent)
-	req.Header.Set("Accept", "application/json;q=0.9")
-
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("scryfall bulk-data error: %s", resp.Status)
-	}
-
-	var bulk bulkDataResponse
-	if err := json.NewDecoder(resp.Body).Decode(&bulk); err != nil {
-		return "", err
-	}
-
-	for _, item := range bulk.Data {
-		if item.Type == bulkType {
-			return item.DownloadUri, nil
-		}
-	}
-
-	return "", fmt.Errorf("scryfall bulk type %q not found", bulkType)
-}
-
 func (s *cardSource) ReadCards(ctx context.Context, filePath string, limit int) ([]domain.ImportCard, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -189,6 +214,8 @@ func (s *cardSource) ReadCards(ctx context.Context, filePath string, limit int) 
 			OracleID: oracleID,
 		}
 
+		setId := uuid.MustParse(sc.SetID)
+
 		mtgCard := domain.MTGCard{
 			Name:           sc.Name,
 			Layout:         sc.Layout,
@@ -198,10 +225,56 @@ func (s *cardSource) ReadCards(ctx context.Context, filePath string, limit int) 
 			Colors:         sc.Colors,
 			ImgSmallURI:    sc.ImageURIs.Small,
 			ImgNormalURI:   sc.ImageURIs.Normal,
+			SetID:          setId,
+			SetCode:        sc.Set,
 		}
 
 		cards = append(cards, domain.ImportCard{Card: card, MTGCard: mtgCard})
 	}
 
 	return cards, nil
+}
+
+func (s *cardSource) execScryfallRequest(ctx context.Context, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", s.userAgent)
+	req.Header.Set("Accept", "application/json;q=0.9")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("scryfall request error: %s", resp.Status)
+	}
+
+	return resp, nil
+}
+
+func (s *cardSource) bulkFilePath() string {
+	return filepath.Join(importDir, fmt.Sprintf("scryfall-%s.json", bulkDataType))
+}
+
+func (s *cardSource) bulkDownloadURL(ctx context.Context, bulkType string) (string, error) {
+	resp, err := s.execScryfallRequest(ctx, scryfallAPIUrl+"/bulk-data")
+	if err != nil {
+		return "", err
+	}
+
+	var bulk bulkDataResponse
+	if err := json.NewDecoder(resp.Body).Decode(&bulk); err != nil {
+		return "", err
+	}
+
+	for _, item := range bulk.Data {
+		if item.Type == bulkType {
+			return item.DownloadUri, nil
+		}
+	}
+
+	return "", fmt.Errorf("scryfall bulk type %q not found", bulkType)
 }

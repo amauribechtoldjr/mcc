@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
 )
 
@@ -82,18 +83,7 @@ INSERT INTO mtg_card (
   img_small_uri, 
   img_normal_uri
 )
-VALUES (
-  $1, 
-  $2,
-  $3,
-  $4,
-  $5,
-  $6,
-  $7,
-  $8,
-  $9,
-  $10
-)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
 type CreateMTGCardParams struct {
@@ -123,6 +113,42 @@ func (q *Queries) CreateMTGCard(ctx context.Context, arg CreateMTGCardParams) er
 		arg.ImgNormalUri,
 	)
 	return err
+}
+
+const createMTGSet = `-- name: CreateMTGSet :one
+INSERT INTO mtg_set (
+  import_id,
+  "name",
+  code,
+  released_at,
+  parent_set_code, 
+  card_count
+)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id
+`
+
+type CreateMTGSetParams struct {
+	ImportID      uuid.UUID          `json:"import_id"`
+	Name          string             `json:"name"`
+	Code          string             `json:"code"`
+	ReleasedAt    pgtype.Timestamptz `json:"released_at"`
+	ParentSetCode *string            `json:"parent_set_code"`
+	CardCount     *int32             `json:"card_count"`
+}
+
+func (q *Queries) CreateMTGSet(ctx context.Context, arg CreateMTGSetParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createMTGSet,
+		arg.ImportID,
+		arg.Name,
+		arg.Code,
+		arg.ReleasedAt,
+		arg.ParentSetCode,
+		arg.CardCount,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const findCardById = `-- name: FindCardById :one

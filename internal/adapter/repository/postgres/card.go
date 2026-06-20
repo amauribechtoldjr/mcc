@@ -56,7 +56,6 @@ func (r *cardRepository) CreateCards(ctx context.Context, cards []domain.ImportC
 		}
 
 		card.MTGCard.CardID = cardId
-		card.MTGCard.SetID = uuid.MustParse("019ecaeb-57f4-7ef5-b147-a8bd5a9b6368")
 
 		cmcValue := decimal.NullDecimal{
 			Decimal: decimal.NewFromFloat32(card.MTGCard.CMC),

@@ -13,6 +13,7 @@ type Card struct {
 type MTGCard struct {
 	ID             uuid.UUID `json:"id"`
 	SetID          uuid.UUID `json:"set_id"`
+	SetCode        string    `json:"set"`
 	CardID         uuid.UUID `json:"card_id"`
 	Name           string    `json:"name"`
 	Layout         string    `json:"layout"`

@@ -72,6 +72,7 @@ type MtgSet struct {
 	ReleasedAt    pgtype.Timestamptz `json:"released_at"`
 	ParentSetCode *string            `json:"parent_set_code"`
 	CardCount     *int32             `json:"card_count"`
+	ImportID      uuid.UUID          `json:"import_id"`
 }
 
 type User struct {
