@@ -81,9 +81,10 @@ INSERT INTO mtg_card (
   color_indicator, 
   colors, 
   img_small_uri, 
-  img_normal_uri
+  img_normal_uri,
+  last_import_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 `
 
 type CreateMTGCardParams struct {
@@ -97,6 +98,7 @@ type CreateMTGCardParams struct {
 	Colors         *string             `json:"colors"`
 	ImgSmallUri    *string             `json:"img_small_uri"`
 	ImgNormalUri   *string             `json:"img_normal_uri"`
+	LastImportID   uuid.UUID           `json:"last_import_id"`
 }
 
 func (q *Queries) CreateMTGCard(ctx context.Context, arg CreateMTGCardParams) error {
@@ -111,6 +113,7 @@ func (q *Queries) CreateMTGCard(ctx context.Context, arg CreateMTGCardParams) er
 		arg.Colors,
 		arg.ImgSmallUri,
 		arg.ImgNormalUri,
+		arg.LastImportID,
 	)
 	return err
 }
@@ -151,6 +154,29 @@ func (q *Queries) CreateMTGSet(ctx context.Context, arg CreateMTGSetParams) (uui
 	return id, err
 }
 
+const createScryfallImport = `-- name: CreateScryfallImport :one
+INSERT INTO scryfall_import (
+  started_at,
+  bulk_updated_at,
+  "status"
+)
+VALUES ($1, $2, $3)
+RETURNING id
+`
+
+type CreateScryfallImportParams struct {
+	StartedAt     pgtype.Timestamptz `json:"started_at"`
+	BulkUpdatedAt pgtype.Timestamptz `json:"bulk_updated_at"`
+	Status        string             `json:"status"`
+}
+
+func (q *Queries) CreateScryfallImport(ctx context.Context, arg CreateScryfallImportParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createScryfallImport, arg.StartedAt, arg.BulkUpdatedAt, arg.Status)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const findCardById = `-- name: FindCardById :one
 SELECT id, oracle_id, game_id from "card" WHERE id = $1
 `
@@ -171,6 +197,22 @@ func (q *Queries) FindGameByCode(ctx context.Context, code string) (Game, error)
 	var i Game
 	err := row.Scan(&i.ID, &i.Name, &i.Code)
 	return i, err
+}
+
+const getScryfallImportCount = `-- name: GetScryfallImportCount :one
+SELECT 
+  count(id) as import_quantity 
+FROM 
+  scryfall_import 
+WHERE 
+  bulk_updated_at >= $1
+`
+
+func (q *Queries) GetScryfallImportCount(ctx context.Context, bulkUpdatedAt pgtype.Timestamptz) (int64, error) {
+	row := q.db.QueryRow(ctx, getScryfallImportCount, bulkUpdatedAt)
+	var import_quantity int64
+	err := row.Scan(&import_quantity)
+	return import_quantity, err
 }
 
 const listCards = `-- name: ListCards :many
@@ -225,4 +267,24 @@ func (q *Queries) ListCollections(ctx context.Context, userID uuid.UUID) ([]Coll
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateScryfallImport = `-- name: UpdateScryfallImport :exec
+UPDATE
+  scryfall_import
+SET
+  finished_at = $1, "status" = $2
+WHERE
+  id = $3
+`
+
+type UpdateScryfallImportParams struct {
+	FinishedAt pgtype.Timestamptz `json:"finished_at"`
+	Status     string             `json:"status"`
+	ID         uuid.UUID          `json:"id"`
+}
+
+func (q *Queries) UpdateScryfallImport(ctx context.Context, arg UpdateScryfallImportParams) error {
+	_, err := q.db.Exec(ctx, updateScryfallImport, arg.FinishedAt, arg.Status, arg.ID)
+	return err
 }

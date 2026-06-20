@@ -34,9 +34,10 @@ INSERT INTO mtg_card (
   color_indicator, 
   colors, 
   img_small_uri, 
-  img_normal_uri
+  img_normal_uri,
+  last_import_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
 
 -- name: CreateMTGSet :one
 INSERT INTO mtg_set (
@@ -49,3 +50,28 @@ INSERT INTO mtg_set (
 )
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id;
+
+-- name: CreateScryfallImport :one
+INSERT INTO scryfall_import (
+  started_at,
+  bulk_updated_at,
+  "status"
+)
+VALUES ($1, $2, $3)
+RETURNING id;
+
+-- name: GetScryfallImportCount :one
+SELECT 
+  count(id) as import_quantity 
+FROM 
+  scryfall_import 
+WHERE 
+  bulk_updated_at >= $1;
+
+-- name: UpdateScryfallImport :exec
+UPDATE
+  scryfall_import
+SET
+  finished_at = $1, "status" = $2
+WHERE
+  id = $3;

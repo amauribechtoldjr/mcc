@@ -48,6 +48,7 @@ type MtgCard struct {
 	Colors         *string             `json:"colors"`
 	ImgSmallUri    *string             `json:"img_small_uri"`
 	ImgNormalUri   *string             `json:"img_normal_uri"`
+	LastImportID   uuid.UUID           `json:"last_import_id"`
 }
 
 type MtgRelated struct {
@@ -73,6 +74,14 @@ type MtgSet struct {
 	ParentSetCode *string            `json:"parent_set_code"`
 	CardCount     *int32             `json:"card_count"`
 	ImportID      uuid.UUID          `json:"import_id"`
+}
+
+type ScryfallImport struct {
+	ID            uuid.UUID          `json:"id"`
+	StartedAt     pgtype.Timestamptz `json:"started_at"`
+	FinishedAt    pgtype.Timestamptz `json:"finished_at"`
+	BulkUpdatedAt pgtype.Timestamptz `json:"bulk_updated_at"`
+	Status        string             `json:"status"`
 }
 
 type User struct {

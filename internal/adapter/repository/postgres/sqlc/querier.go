@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -16,10 +17,13 @@ type Querier interface {
 	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
 	CreateMTGCard(ctx context.Context, arg CreateMTGCardParams) error
 	CreateMTGSet(ctx context.Context, arg CreateMTGSetParams) (uuid.UUID, error)
+	CreateScryfallImport(ctx context.Context, arg CreateScryfallImportParams) (uuid.UUID, error)
 	FindCardById(ctx context.Context, id uuid.UUID) (Card, error)
 	FindGameByCode(ctx context.Context, code string) (Game, error)
+	GetScryfallImportCount(ctx context.Context, bulkUpdatedAt pgtype.Timestamptz) (int64, error)
 	ListCards(ctx context.Context) ([]Card, error)
 	ListCollections(ctx context.Context, userID uuid.UUID) ([]Collection, error)
+	UpdateScryfallImport(ctx context.Context, arg UpdateScryfallImportParams) error
 }
 
 var _ Querier = (*Queries)(nil)

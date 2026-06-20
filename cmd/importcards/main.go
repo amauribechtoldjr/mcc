@@ -51,11 +51,12 @@ func main() {
 	cardRepo := postgres.NewCardRepository(queries)
 	gameRepo := postgres.NewGameRepository(queries)
 	mtgSetRepo := postgres.NewMTGSetRepository(queries)
+	scryfallImportRepo := postgres.NewScryfallImportRepository(queries)
 
 	client := &http.Client{Timeout: 5 * time.Minute}
 	source := scryfall.NewCardSource(client, userAgent)
 
-	importService := service.NewImportService(source, cardRepo, gameRepo, mtgSetRepo)
+	importService := service.NewImportService(source, cardRepo, gameRepo, mtgSetRepo, scryfallImportRepo)
 
 	if err := importService.Run(ctx, gameCode, cardLimit); err != nil {
 		slog.Error("failed to import cards", "error", err)

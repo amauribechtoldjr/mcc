@@ -23,6 +23,7 @@ type MTGCard struct {
 	Colors         []string  `json:"colors"`
 	ImgSmallURI    string    `json:"img_smal_uri"`
 	ImgNormalURI   string    `json:"img_normal_uri"`
+	LastImportId   uuid.UUID `json:"last_import_id"`
 }
 
 type ImportCard struct {

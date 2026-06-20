@@ -17,8 +17,8 @@ import (
 
 const (
 	scryfallAPIUrl = "https://api.scryfall.com"
-	bulkDataType   = "default_cards"
 	importDir      = "C:/dev/mcc/imports"
+	dateFileFormat = "2006-01-02_15-04-05.000"
 )
 
 type bulkDataResponse struct {
@@ -28,6 +28,7 @@ type bulkDataResponse struct {
 type bulkItem struct {
 	Type        string `json:"type"`
 	DownloadUri string `json:"download_uri"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 type setsResponse struct {
@@ -77,11 +78,11 @@ type cardSource struct {
 	userAgent string
 }
 
-func NewCardSource(client *http.Client, userAgent string) port.CardSource {
+func NewCardSource(client *http.Client, userAgent string) port.ScryfallCardSource {
 	return &cardSource{client: client, userAgent: userAgent}
 }
 
-func (s *cardSource) ReadSets(ctx context.Context) ([]domain.MTGSet, error) {
+func (s *cardSource) GetSets(ctx context.Context) ([]domain.MTGSet, error) {
 	resp, err := s.execScryfallRequest(ctx, scryfallAPIUrl+"/sets")
 	if err != nil {
 		return nil, err
@@ -122,8 +123,8 @@ func (s *cardSource) ReadSets(ctx context.Context) ([]domain.MTGSet, error) {
 	return mtgSets, nil
 }
 
-func (s *cardSource) GetBulkFileIfExists() (string, bool) {
-	filePath := s.bulkFilePath()
+func (s *cardSource) GetBulkFileIfExists(updatedAt time.Time) (string, bool) {
+	filePath := s.bulkFilePath(updatedAt)
 
 	_, err := os.Stat(filePath)
 	if err != nil {
@@ -133,13 +134,8 @@ func (s *cardSource) GetBulkFileIfExists() (string, bool) {
 	return filePath, true
 }
 
-func (s *cardSource) Download(ctx context.Context) (string, error) {
-	downloadURI, err := s.bulkDownloadURL(ctx, bulkDataType)
-	if err != nil {
-		return "", err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURI, nil)
+func (s *cardSource) Download(ctx context.Context, bulkData domain.ScryfallBulkData) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, bulkData.DonwloadURI, nil)
 	if err != nil {
 		return "", err
 	}
@@ -155,9 +151,9 @@ func (s *cardSource) Download(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("scryfall download error: %s", resp.Status)
 	}
 
-	finalPath := s.bulkFilePath()
+	finalPath := s.bulkFilePath(bulkData.UpdatedAt)
 
-	tmp, err := os.CreateTemp(importDir, fmt.Sprintf("scryfall-%s-*.json.tmp", bulkDataType))
+	tmp, err := os.CreateTemp(importDir, fmt.Sprintf("scryfall_%s_*.json.tmp", bulkData.UpdatedAt.Format(dateFileFormat)))
 	if err != nil {
 		return "", err
 	}
@@ -255,26 +251,35 @@ func (s *cardSource) execScryfallRequest(ctx context.Context, url string) (*http
 	return resp, nil
 }
 
-func (s *cardSource) bulkFilePath() string {
-	return filepath.Join(importDir, fmt.Sprintf("scryfall-%s.json", bulkDataType))
-}
-
-func (s *cardSource) bulkDownloadURL(ctx context.Context, bulkType string) (string, error) {
+func (s *cardSource) GetBulkData(ctx context.Context) ([]domain.ScryfallBulkData, error) {
 	resp, err := s.execScryfallRequest(ctx, scryfallAPIUrl+"/bulk-data")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var bulk bulkDataResponse
 	if err := json.NewDecoder(resp.Body).Decode(&bulk); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	for _, item := range bulk.Data {
-		if item.Type == bulkType {
-			return item.DownloadUri, nil
+	bulkData := make([]domain.ScryfallBulkData, len(bulk.Data))
+	for i, item := range bulk.Data {
+
+		updatedAt, err := time.Parse(time.RFC3339Nano, item.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		bulkData[i] = domain.ScryfallBulkData{
+			Type:        item.Type,
+			UpdatedAt:   updatedAt,
+			DonwloadURI: item.DownloadUri,
 		}
 	}
 
-	return "", fmt.Errorf("scryfall bulk type %q not found", bulkType)
+	return bulkData, nil
+}
+
+func (s *cardSource) bulkFilePath(updatedAt time.Time) string {
+	return filepath.Join(importDir, fmt.Sprintf("scryfall_%s.json", updatedAt.Format(dateFileFormat)))
 }
