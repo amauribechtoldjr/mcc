@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS game (
 );
 
 INSERT INTO game ("name", code)
-VALUES 
-  ('Magic: The Gathering', 'mtg'), 
+VALUES
+  ('Magic: The Gathering', 'mtg'),
   ('Pokémon Trading Card Game', 'ptcg');
 
 CREATE TABLE IF NOT EXISTS "user" (
@@ -19,9 +19,7 @@ INSERT INTO "user" ("name") VALUES ('Amauri Bechtold Junior');
 
 CREATE TABLE IF NOT EXISTS "card" (
   id UUID PRIMARY KEY DEFAULT uuidv7(),
-  oracle_id UUID NOT NULL,
   game_id UUID NOT NULL,
-  CONSTRAINT card_unique_oracle_idx UNIQUE (oracle_id),
   CONSTRAINT fk_game_id FOREIGN KEY (game_id) REFERENCES game(id)
 );
 
@@ -46,18 +44,25 @@ CREATE TABLE IF NOT EXISTS collection_card (
 
 CREATE TABLE IF NOT EXISTS mtg_set (
   id UUID PRIMARY KEY DEFAULT uuidv7(),
+  import_id UUID NOT NULL,
   code TEXT NOT NULL,
   "name" TEXT NOT NULL,
   released_at TIMESTAMPTZ NOT NULL,
   parent_set_code TEXT,
-  card_count INTEGER
+  card_count INTEGER,
+  CONSTRAINT uq_mtg_set_code UNIQUE (code)
 );
 
 CREATE TABLE IF NOT EXISTS mtg_card (
-  id UUID PRIMARY KEY DEFAULT uuidv7(),
+  id UUID PRIMARY KEY REFERENCES "card"(id) ON DELETE CASCADE,
   set_id UUID NOT NULL,
-  card_id UUID NOT NULL,
+  oracle_id UUID NOT NULL,
+  lang TEXT NOT NULL,
+  collector_number TEXT NOT NULL,
   name TEXT NOT NULL,
+  printed_type_line TEXT,
+  printed_text TEXT,
+  flavor_text TEXT,
   layout TEXT,
   cmc NUMERIC(10,2),
   color_identity TEXT,
@@ -65,8 +70,17 @@ CREATE TABLE IF NOT EXISTS mtg_card (
   colors TEXT,
   img_small_uri TEXT,
   img_normal_uri TEXT,
+  last_import_id UUID NOT NULL,
   CONSTRAINT fk_set_id FOREIGN KEY (set_id) REFERENCES mtg_set(id),
-  CONSTRAINT fk_card_id FOREIGN KEY (card_id) REFERENCES "card"(id)
+  CONSTRAINT uq_mtg_printing UNIQUE (set_id, collector_number, lang)
+);
+
+CREATE TABLE IF NOT EXISTS scryfall_import (
+  id UUID PRIMARY KEY DEFAULT uuidv7(),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  finished_at TIMESTAMPTZ,
+  bulk_updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "status" TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS mtg_related (
@@ -92,6 +106,7 @@ DROP TABLE IF EXISTS "mtg_related_card";
 DROP TABLE IF EXISTS "mtg_related";
 DROP TABLE IF EXISTS "mtg_card";
 DROP TABLE IF EXISTS "mtg_set";
+DROP TABLE IF EXISTS "scryfall_import";
 DROP TABLE IF EXISTS "collection";
 DROP TABLE IF EXISTS "card";
 DROP TABLE IF EXISTS "user";

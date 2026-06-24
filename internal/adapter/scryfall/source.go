@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/amauribechtoldjr/mcc/internal/core/domain"
@@ -58,19 +59,25 @@ type scryfallCardImageURIs struct {
 }
 
 type scryfallCard struct {
-	ID             string                `json:"id"`
-	OracleID       string                `json:"oracle_id"`
-	Name           string                `json:"name"`
-	Lang           string                `json:"lang"`
-	ReleasedAt     string                `json:"released_at"`
-	Layout         string                `json:"layout"`
-	ImageURIs      scryfallCardImageURIs `json:"image_uris"`
-	CMC            float32               `json:"cmc"`
-	Colors         []string              `json:"colors"`
-	ColorIdentity  []string              `json:"color_identity"`
-	ColorIndicator []string              `json:"color_indicator"`
-	Set            string                `json:"set"`
-	SetID          string                `json:"set_id"`
+	ID              string                `json:"id"`
+	OracleID        string                `json:"oracle_id"`
+	Name            string                `json:"name"`
+	Lang            string                `json:"lang"`
+	ReleasedAt      string                `json:"released_at"`
+	Layout          string                `json:"layout"`
+	ImageURIs       scryfallCardImageURIs `json:"image_uris"`
+	CMC             float32               `json:"cmc"`
+	Colors          []string              `json:"colors"`
+	ColorIdentity   []string              `json:"color_identity"`
+	ColorIndicator  []string              `json:"color_indicator"`
+	Set             string                `json:"set"`
+	SetID           string                `json:"set_id"`
+	Games           []string              `json:"games"`
+	CollectorNumber string                `json:"collector_number"`
+	PrintedName     string                `json:"printed_name"`
+	PrintedTypeLine string                `json:"printed_type_line"`
+	PrintedText     string                `json:"printed_text"`
+	FlavorText      string                `json:"flavor_text"`
 }
 
 type cardSource struct {
@@ -201,28 +208,42 @@ func (s *cardSource) ReadCards(ctx context.Context, filePath string, limit int) 
 			continue
 		}
 
+		// só cartas fisicamente colecionáveis (descarta produtos digitais: arena/mtgo)
+		if !slices.Contains(sc.Games, "paper") {
+			continue
+		}
+
 		oracleID, err := uuid.Parse(sc.OracleID)
 		if err != nil {
 			return nil, err
 		}
 
-		card := domain.Card{
-			OracleID: oracleID,
-		}
+		card := domain.Card{}
 
 		setId := uuid.MustParse(sc.SetID)
 
+		name := sc.Name
+		if sc.PrintedName != "" {
+			name = sc.PrintedName
+		}
+
 		mtgCard := domain.MTGCard{
-			Name:           sc.Name,
-			Layout:         sc.Layout,
-			CMC:            sc.CMC,
-			ColorIdentity:  sc.ColorIdentity,
-			ColorIndicator: sc.ColorIndicator,
-			Colors:         sc.Colors,
-			ImgSmallURI:    sc.ImageURIs.Small,
-			ImgNormalURI:   sc.ImageURIs.Normal,
-			SetID:          setId,
-			SetCode:        sc.Set,
+			OracleID:        oracleID,
+			Name:            name,
+			PrintedTypeLine: sc.PrintedTypeLine,
+			PrintedText:     sc.PrintedText,
+			FlavorText:      sc.FlavorText,
+			Lang:            sc.Lang,
+			CollectorNumber: sc.CollectorNumber,
+			Layout:          sc.Layout,
+			CMC:             sc.CMC,
+			ColorIdentity:   sc.ColorIdentity,
+			ColorIndicator:  sc.ColorIndicator,
+			Colors:          sc.Colors,
+			ImgSmallURI:     sc.ImageURIs.Small,
+			ImgNormalURI:    sc.ImageURIs.Normal,
+			SetID:           setId,
+			SetCode:         sc.Set,
 		}
 
 		cards = append(cards, domain.ImportCard{Card: card, MTGCard: mtgCard})

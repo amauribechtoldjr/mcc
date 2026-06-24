@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/shopspring/decimal"
 )
 
 const addCardToCollection = `-- name: AddCardToCollection :exec
@@ -26,26 +25,6 @@ type AddCardToCollectionParams struct {
 func (q *Queries) AddCardToCollection(ctx context.Context, arg AddCardToCollectionParams) error {
 	_, err := q.db.Exec(ctx, addCardToCollection, arg.CardID, arg.CollectionID, arg.Quantity)
 	return err
-}
-
-const createCard = `-- name: CreateCard :one
-INSERT INTO "card" (oracle_id, game_id)
-VALUES ($1, $2)
-ON CONFLICT (oracle_id) DO UPDATE
-  SET oracle_id = EXCLUDED.oracle_id
-RETURNING id
-`
-
-type CreateCardParams struct {
-	OracleID uuid.UUID `json:"oracle_id"`
-	GameID   uuid.UUID `json:"game_id"`
-}
-
-func (q *Queries) CreateCard(ctx context.Context, arg CreateCardParams) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, createCard, arg.OracleID, arg.GameID)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
 }
 
 const createCollection = `-- name: CreateCollection :one
@@ -70,64 +49,22 @@ func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionPara
 	return i, err
 }
 
-const createMTGCard = `-- name: CreateMTGCard :exec
-INSERT INTO mtg_card (
-  set_id, 
-  card_id,
-  "name",
-  layout, 
-  cmc, 
-  color_identity, 
-  color_indicator, 
-  colors, 
-  img_small_uri, 
-  img_normal_uri,
-  last_import_id
-)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-`
-
-type CreateMTGCardParams struct {
-	SetID          uuid.UUID           `json:"set_id"`
-	CardID         uuid.UUID           `json:"card_id"`
-	Name           string              `json:"name"`
-	Layout         *string             `json:"layout"`
-	Cmc            decimal.NullDecimal `json:"cmc"`
-	ColorIdentity  *string             `json:"color_identity"`
-	ColorIndicator *string             `json:"color_indicator"`
-	Colors         *string             `json:"colors"`
-	ImgSmallUri    *string             `json:"img_small_uri"`
-	ImgNormalUri   *string             `json:"img_normal_uri"`
-	LastImportID   uuid.UUID           `json:"last_import_id"`
-}
-
-func (q *Queries) CreateMTGCard(ctx context.Context, arg CreateMTGCardParams) error {
-	_, err := q.db.Exec(ctx, createMTGCard,
-		arg.SetID,
-		arg.CardID,
-		arg.Name,
-		arg.Layout,
-		arg.Cmc,
-		arg.ColorIdentity,
-		arg.ColorIndicator,
-		arg.Colors,
-		arg.ImgSmallUri,
-		arg.ImgNormalUri,
-		arg.LastImportID,
-	)
-	return err
-}
-
 const createMTGSet = `-- name: CreateMTGSet :one
 INSERT INTO mtg_set (
   import_id,
   "name",
   code,
   released_at,
-  parent_set_code, 
+  parent_set_code,
   card_count
 )
 VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (code) DO UPDATE SET
+  import_id = EXCLUDED.import_id,
+  "name" = EXCLUDED.name,
+  released_at = EXCLUDED.released_at,
+  parent_set_code = EXCLUDED.parent_set_code,
+  card_count = EXCLUDED.card_count
 RETURNING id
 `
 
@@ -178,13 +115,13 @@ func (q *Queries) CreateScryfallImport(ctx context.Context, arg CreateScryfallIm
 }
 
 const findCardById = `-- name: FindCardById :one
-SELECT id, oracle_id, game_id from "card" WHERE id = $1
+SELECT id, game_id from "card" WHERE id = $1
 `
 
 func (q *Queries) FindCardById(ctx context.Context, id uuid.UUID) (Card, error) {
 	row := q.db.QueryRow(ctx, findCardById, id)
 	var i Card
-	err := row.Scan(&i.ID, &i.OracleID, &i.GameID)
+	err := row.Scan(&i.ID, &i.GameID)
 	return i, err
 }
 
@@ -216,7 +153,7 @@ func (q *Queries) GetScryfallImportCount(ctx context.Context, bulkUpdatedAt pgty
 }
 
 const listCards = `-- name: ListCards :many
-SELECT id, oracle_id, game_id FROM "card"
+SELECT id, game_id FROM "card"
 `
 
 func (q *Queries) ListCards(ctx context.Context) ([]Card, error) {
@@ -228,7 +165,7 @@ func (q *Queries) ListCards(ctx context.Context) ([]Card, error) {
 	var items []Card
 	for rows.Next() {
 		var i Card
-		if err := rows.Scan(&i.ID, &i.OracleID, &i.GameID); err != nil {
+		if err := rows.Scan(&i.ID, &i.GameID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

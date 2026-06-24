@@ -18,7 +18,7 @@ import (
 
 const (
 	gameCode  = "mtg"
-	cardLimit = 10
+	cardLimit = 900000
 	userAgent = "my-magic-collection/0.1 (contact: amauribechtoldjr@gmail.com)"
 )
 

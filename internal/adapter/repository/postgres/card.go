@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	repo "github.com/amauribechtoldjr/mcc/internal/adapter/repository/postgres/sqlc"
@@ -11,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
+
+const batchSize = 1000
 
 type cardRepository struct {
 	q repo.Querier
@@ -44,45 +45,67 @@ func (r *cardRepository) FindCardByID(ctx context.Context, id uuid.UUID) (domain
 }
 
 func (r *cardRepository) CreateCards(ctx context.Context, cards []domain.ImportCard) error {
+	params := make([]repo.UpsertMTGCardParams, 0, len(cards))
 	for _, card := range cards {
-		cardId, err := r.q.CreateCard(ctx, repo.CreateCardParams{
-			OracleID: card.Card.OracleID,
-			GameID:   card.Card.GameID,
-		})
-
-		if err != nil {
-			fmt.Printf("CARD ERROR: %v \n", err)
-			return mapError(err)
-		}
-
-		card.MTGCard.CardID = cardId
-
 		cmcValue := decimal.NullDecimal{
 			Decimal: decimal.NewFromFloat32(card.MTGCard.CMC),
 			Valid:   true,
 		}
 
-		mtgCardParams := repo.CreateMTGCardParams{
-			SetID:          card.MTGCard.SetID,
-			Name:           card.MTGCard.Name,
-			CardID:         card.MTGCard.CardID,
-			Layout:         &card.MTGCard.Layout,
-			Cmc:            cmcValue,
-			ColorIdentity:  stringsToString(card.MTGCard.ColorIdentity),
-			ColorIndicator: stringsToString(card.MTGCard.ColorIndicator),
-			Colors:         stringsToString(card.MTGCard.Colors),
-			ImgSmallUri:    &card.MTGCard.ImgSmallURI,
-			ImgNormalUri:   &card.MTGCard.ImgNormalURI,
-		}
+		params = append(params, repo.UpsertMTGCardParams{
+			GameID:          card.Card.GameID,
+			SetID:           card.MTGCard.SetID,
+			OracleID:        card.MTGCard.OracleID,
+			Lang:            card.MTGCard.Lang,
+			CollectorNumber: card.MTGCard.CollectorNumber,
+			Name:            card.MTGCard.Name,
+			PrintedTypeLine: nilIfEmpty(card.MTGCard.PrintedTypeLine),
+			PrintedText:     nilIfEmpty(card.MTGCard.PrintedText),
+			FlavorText:      nilIfEmpty(card.MTGCard.FlavorText),
+			Layout:          nilIfEmpty(card.MTGCard.Layout),
+			Cmc:             cmcValue,
+			ColorIdentity:   stringsToString(card.MTGCard.ColorIdentity),
+			ColorIndicator:  stringsToString(card.MTGCard.ColorIndicator),
+			Colors:          stringsToString(card.MTGCard.Colors),
+			ImgSmallUri:     nilIfEmpty(card.MTGCard.ImgSmallURI),
+			ImgNormalUri:    nilIfEmpty(card.MTGCard.ImgNormalURI),
+			LastImportID:    card.MTGCard.LastImportId,
+		})
+	}
 
-		err = r.q.CreateMTGCard(ctx, mtgCardParams)
-		if err != nil {
-			fmt.Printf("MTG CARD ERROR: %v", err)
-			return mapError(err)
+	for start := 0; start < len(params); start += batchSize {
+		end := min(start+batchSize, len(params))
+
+		if err := r.upsertBatch(ctx, params[start:end]); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func (r *cardRepository) upsertBatch(ctx context.Context, params []repo.UpsertMTGCardParams) error {
+	batch := r.q.UpsertMTGCard(ctx, params)
+	defer batch.Close()
+
+	var firstErr error
+	batch.Exec(func(_ int, err error) {
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	})
+	if firstErr != nil {
+		return mapError(firstErr)
+	}
+
+	return nil
+}
+
+func nilIfEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 func stringsToString(strs []string) *string {
@@ -93,8 +116,7 @@ func stringsToString(strs []string) *string {
 
 func toDomainCard(row repo.Card) domain.Card {
 	return domain.Card{
-		ID:       row.ID,
-		OracleID: row.OracleID,
-		GameID:   row.GameID,
+		ID:     row.ID,
+		GameID: row.GameID,
 	}
 }

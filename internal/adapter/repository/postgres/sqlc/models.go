@@ -11,9 +11,8 @@ import (
 )
 
 type Card struct {
-	ID       uuid.UUID `json:"id"`
-	OracleID uuid.UUID `json:"oracle_id"`
-	GameID   uuid.UUID `json:"game_id"`
+	ID     uuid.UUID `json:"id"`
+	GameID uuid.UUID `json:"game_id"`
 }
 
 type Collection struct {
@@ -37,18 +36,23 @@ type Game struct {
 }
 
 type MtgCard struct {
-	ID             uuid.UUID           `json:"id"`
-	SetID          uuid.UUID           `json:"set_id"`
-	CardID         uuid.UUID           `json:"card_id"`
-	Name           string              `json:"name"`
-	Layout         *string             `json:"layout"`
-	Cmc            decimal.NullDecimal `json:"cmc"`
-	ColorIdentity  *string             `json:"color_identity"`
-	ColorIndicator *string             `json:"color_indicator"`
-	Colors         *string             `json:"colors"`
-	ImgSmallUri    *string             `json:"img_small_uri"`
-	ImgNormalUri   *string             `json:"img_normal_uri"`
-	LastImportID   uuid.UUID           `json:"last_import_id"`
+	ID              uuid.UUID           `json:"id"`
+	SetID           uuid.UUID           `json:"set_id"`
+	OracleID        uuid.UUID           `json:"oracle_id"`
+	Lang            string              `json:"lang"`
+	CollectorNumber string              `json:"collector_number"`
+	Name            string              `json:"name"`
+	PrintedTypeLine *string             `json:"printed_type_line"`
+	PrintedText     *string             `json:"printed_text"`
+	FlavorText      *string             `json:"flavor_text"`
+	Layout          *string             `json:"layout"`
+	Cmc             decimal.NullDecimal `json:"cmc"`
+	ColorIdentity   *string             `json:"color_identity"`
+	ColorIndicator  *string             `json:"color_indicator"`
+	Colors          *string             `json:"colors"`
+	ImgSmallUri     *string             `json:"img_small_uri"`
+	ImgNormalUri    *string             `json:"img_normal_uri"`
+	LastImportID    uuid.UUID           `json:"last_import_id"`
 }
 
 type MtgRelated struct {
@@ -68,12 +72,12 @@ type MtgRelatedCard struct {
 
 type MtgSet struct {
 	ID            uuid.UUID          `json:"id"`
+	ImportID      uuid.UUID          `json:"import_id"`
 	Code          string             `json:"code"`
 	Name          string             `json:"name"`
 	ReleasedAt    pgtype.Timestamptz `json:"released_at"`
 	ParentSetCode *string            `json:"parent_set_code"`
 	CardCount     *int32             `json:"card_count"`
-	ImportID      uuid.UUID          `json:"import_id"`
 }
 
 type ScryfallImport struct {

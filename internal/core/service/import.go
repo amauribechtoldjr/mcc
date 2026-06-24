@@ -80,7 +80,7 @@ func (s *importService) Run(ctx context.Context, gameCode string, limit int) err
 		slog.Info("Downloading bulk file")
 		filePath, err = s.source.Download(ctx, *allCards)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to download all cards bulk data: %w", err)
 		}
 	}
 
@@ -108,14 +108,24 @@ func (s *importService) Run(ctx context.Context, gameCode string, limit int) err
 		setsIds[set.ImportID] = setId
 	}
 
+	imported := make([]domain.ImportCard, 0, len(cards))
 	for i := range cards {
+		setID, ok := setsIds[cards[i].MTGCard.SetID]
+		if !ok {
+			slog.Warn("skipping card: set not imported",
+				"set_id", cards[i].MTGCard.SetID,
+				"name", cards[i].MTGCard.Name)
+			continue
+		}
+
 		cards[i].Card.GameID = game.ID
-		cards[i].MTGCard.SetID = setsIds[cards[i].MTGCard.SetID]
+		cards[i].MTGCard.SetID = setID
 		cards[i].MTGCard.LastImportId = newImportId
+		imported = append(imported, cards[i])
 	}
 
 	slog.Info("Creating cards")
-	if err := s.cards.CreateCards(ctx, cards); err != nil {
+	if err := s.cards.CreateCards(ctx, imported); err != nil {
 		return err
 	}
 
@@ -129,7 +139,7 @@ func (s *importService) Run(ctx context.Context, gameCode string, limit int) err
 		return err
 	}
 
-	slog.Info("import finished", "game", gameCode, "cards", len(cards))
+	slog.Info("import finished", "game", gameCode, "cards", len(imported))
 
 	return nil
 }

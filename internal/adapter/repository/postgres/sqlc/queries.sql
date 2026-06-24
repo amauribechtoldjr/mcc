@@ -16,28 +16,57 @@ INSERT INTO collection_card (card_id, collection_id, quantity) VALUES ($1, $2, $
 -- name: FindGameByCode :one
 SELECT * FROM game WHERE code = $1;
 
--- name: CreateCard :one
-INSERT INTO "card" (oracle_id, game_id)
-VALUES ($1, $2)
-ON CONFLICT (oracle_id) DO UPDATE
-  SET oracle_id = EXCLUDED.oracle_id
-RETURNING id;
-
--- name: CreateMTGCard :exec
+-- name: UpsertMTGCard :batchexec
+WITH existing AS (
+  SELECT id FROM mtg_card
+  WHERE set_id = $2 AND collector_number = $5 AND lang = $4
+),
+new_card AS (
+  INSERT INTO "card" (game_id)
+  SELECT $1
+  WHERE NOT EXISTS (SELECT 1 FROM existing)
+  RETURNING id
+),
+resolved AS (
+  SELECT id FROM existing
+  UNION ALL
+  SELECT id FROM new_card
+)
 INSERT INTO mtg_card (
-  set_id, 
-  card_id,
+  id,
+  set_id,
+  oracle_id,
+  lang,
+  collector_number,
   "name",
-  layout, 
-  cmc, 
-  color_identity, 
-  color_indicator, 
-  colors, 
-  img_small_uri, 
+  printed_type_line,
+  printed_text,
+  flavor_text,
+  layout,
+  cmc,
+  color_identity,
+  color_indicator,
+  colors,
+  img_small_uri,
   img_normal_uri,
   last_import_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+SELECT id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+FROM resolved
+ON CONFLICT (set_id, collector_number, lang) DO UPDATE SET
+  oracle_id = EXCLUDED.oracle_id,
+  "name" = EXCLUDED.name,
+  printed_type_line = EXCLUDED.printed_type_line,
+  printed_text = EXCLUDED.printed_text,
+  flavor_text = EXCLUDED.flavor_text,
+  layout = EXCLUDED.layout,
+  cmc = EXCLUDED.cmc,
+  color_identity = EXCLUDED.color_identity,
+  color_indicator = EXCLUDED.color_indicator,
+  colors = EXCLUDED.colors,
+  img_small_uri = EXCLUDED.img_small_uri,
+  img_normal_uri = EXCLUDED.img_normal_uri,
+  last_import_id = EXCLUDED.last_import_id;
 
 -- name: CreateMTGSet :one
 INSERT INTO mtg_set (
@@ -45,10 +74,16 @@ INSERT INTO mtg_set (
   "name",
   code,
   released_at,
-  parent_set_code, 
+  parent_set_code,
   card_count
 )
 VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (code) DO UPDATE SET
+  import_id = EXCLUDED.import_id,
+  "name" = EXCLUDED.name,
+  released_at = EXCLUDED.released_at,
+  parent_set_code = EXCLUDED.parent_set_code,
+  card_count = EXCLUDED.card_count
 RETURNING id;
 
 -- name: CreateScryfallImport :one
