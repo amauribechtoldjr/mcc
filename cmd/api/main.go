@@ -7,10 +7,12 @@ import (
 	"os"
 	"time"
 
-	handler "github.com/amauribechtoldjr/mcc/internal/adapter/handler/http"
-	"github.com/amauribechtoldjr/mcc/internal/adapter/repository/postgres"
-	repo "github.com/amauribechtoldjr/mcc/internal/adapter/repository/postgres/sqlc"
-	"github.com/amauribechtoldjr/mcc/internal/core/service"
+	repo "github.com/amauribechtoldjr/mcc/internal/db/sqlc"
+	"github.com/amauribechtoldjr/mcc/internal/handlers"
+	"github.com/amauribechtoldjr/mcc/internal/repositories"
+	"github.com/amauribechtoldjr/mcc/internal/sources"
+	"github.com/amauribechtoldjr/mcc/internal/usecases"
+
 	"github.com/amauribechtoldjr/mcc/internal/platform/database"
 	"github.com/amauribechtoldjr/mcc/internal/platform/env"
 	"github.com/joho/godotenv"
@@ -42,17 +44,15 @@ func main() {
 
 	queries := repo.New(conn)
 
-	cardRepo := postgres.NewCardRepository(queries)
-	cardService := service.NewCardService(cardRepo)
-	cardHandler := handler.NewCardHandler(cardService)
-
-	collectionRepo := postgres.NewCollectionRepository(queries)
-	collectionService := service.NewCollectionService(collectionRepo)
-	collectionHandler := handler.NewCollectionHandler(collectionService)
+	repos := repositories.NewRepositories(queries)
+	client := &http.Client{Timeout: 5 * time.Minute}
+	source := sources.NewSource(client)
+	useCases := usecases.New(repos, source)
+	handlers := handlers.New(useCases)
 
 	allowedOrigin := env.GetString("FE_ALLOWED_ORIGIN", "http://localhost:5173")
 
-	router := handler.NewRouter(allowedOrigin, cardHandler, collectionHandler)
+	router := handlers.NewRouter(allowedOrigin)
 
 	srv := &http.Server{
 		Addr:         ":8080",

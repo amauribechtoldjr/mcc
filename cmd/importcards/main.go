@@ -7,19 +7,18 @@ import (
 	"os"
 	"time"
 
-	"github.com/amauribechtoldjr/mcc/internal/adapter/repository/postgres"
-	repo "github.com/amauribechtoldjr/mcc/internal/adapter/repository/postgres/sqlc"
-	"github.com/amauribechtoldjr/mcc/internal/adapter/scryfall"
-	"github.com/amauribechtoldjr/mcc/internal/core/service"
+	repo "github.com/amauribechtoldjr/mcc/internal/db/sqlc"
 	"github.com/amauribechtoldjr/mcc/internal/platform/database"
 	"github.com/amauribechtoldjr/mcc/internal/platform/env"
+	"github.com/amauribechtoldjr/mcc/internal/repositories"
+	"github.com/amauribechtoldjr/mcc/internal/sources"
+	"github.com/amauribechtoldjr/mcc/internal/usecases"
 	"github.com/joho/godotenv"
 )
 
 const (
 	gameCode  = "mtg"
 	cardLimit = 900000
-	userAgent = "my-magic-collection/0.1 (contact: amauribechtoldjr@gmail.com)"
 )
 
 func main() {
@@ -48,17 +47,14 @@ func main() {
 
 	queries := repo.New(conn)
 
-	cardRepo := postgres.NewCardRepository(queries)
-	gameRepo := postgres.NewGameRepository(queries)
-	mtgSetRepo := postgres.NewMTGSetRepository(queries)
-	scryfallImportRepo := postgres.NewScryfallImportRepository(queries)
+	repos := repositories.NewRepositories(queries)
 
 	client := &http.Client{Timeout: 5 * time.Minute}
-	source := scryfall.NewCardSource(client, userAgent)
+	source := sources.NewSource(client)
 
-	importService := service.NewImportService(source, cardRepo, gameRepo, mtgSetRepo, scryfallImportRepo)
+	usecases := usecases.New(repos, source)
 
-	if err := importService.Run(ctx, gameCode, cardLimit); err != nil {
+	if err := usecases.ScryfallImport.Run(ctx, gameCode, cardLimit); err != nil {
 		slog.Error("failed to import cards", "error", err)
 		os.Exit(1)
 	}
